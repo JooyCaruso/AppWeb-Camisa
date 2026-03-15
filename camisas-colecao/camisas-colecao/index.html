@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Camisas">
+<meta name="description" content="Minha coleção de camisas de futebol com reconhecimento por IA">
+<link rel="manifest" href="manifest.json">
+<title>Minha Coleção de Camisas</title>
+<style>
+:root {
+  --bg: #0a0a0a;
+  --bg2: #141414;
+  --bg3: #1e1e1e;
+  --bg4: #282828;
+  --border: rgba(255,255,255,0.08);
+  --border2: rgba(255,255,255,0.15);
+  --text: #f0f0f0;
+  --text2: #888;
+  --text3: #555;
+  --accent: #e8ff57;
+  --accent-dark: #b8cc30;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; overflow: hidden; }
+#app { height: 100vh; display: flex; flex-direction: column; max-width: 480px; margin: 0 auto; position: relative; }
+
+/* HEADER */
+.header { padding: 1rem 1.25rem 0.75rem; background: var(--bg); border-bottom: 0.5px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+.header-left h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; }
+.header-left p { font-size: 11px; color: var(--text2); margin-top: 2px; }
+.header-btn { width: 34px; height: 34px; border-radius: 50%; background: var(--bg3); border: 0.5px solid var(--border); color: var(--text); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+/* TABS */
+.tabs { display: flex; background: var(--bg); border-bottom: 0.5px solid var(--border); flex-shrink: 0; }
+.tab { flex: 1; padding: 10px 4px; text-align: center; font-size: 11px; font-weight: 600; color: var(--text3); cursor: pointer; border-bottom: 2px solid transparent; letter-spacing: .03em; transition: color .15s; }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-icon { font-size: 18px; display: block; margin-bottom: 2px; }
+
+/* SECTIONS */
+.section { display: none; flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.section.active { display: block; }
+
+/* SCAN */
+.scan-wrap { padding: 1.25rem; }
+.scan-zone { border: 1.5px dashed var(--border2); border-radius: var(--radius); padding: 2.5rem 1rem; text-align: center; background: var(--bg2); position: relative; cursor: pointer; transition: border-color .15s; }
+.scan-zone:active { border-color: var(--accent); }
+.scan-zone input[type=file] { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+.scan-big-icon { font-size: 52px; margin-bottom: 1rem; display: block; }
+.scan-zone h2 { font-size: 16px; font-weight: 700; }
+.scan-zone p { font-size: 12px; color: var(--text2); margin-top: 6px; line-height: 1.5; }
+.scan-tip { margin-top: 1rem; padding: .75rem 1rem; background: var(--bg3); border-radius: var(--radius-sm); font-size: 12px; color: var(--text2); line-height: 1.5; }
+.scan-tip strong { color: var(--text); }
+
+.preview-box { margin-top: 1rem; background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.preview-img { width: 100%; max-height: 200px; object-fit: cover; display: block; }
+.preview-body { padding: 1rem; }
+.ai-status { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text2); }
+.ai-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+.ai-dot.pulse { animation: pulse 1s infinite; }
+.ai-dot.done { background: var(--success); animation: none; }
+.ai-dot.error { background: var(--danger); animation: none; }
+@keyframes pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.4; transform:scale(.7); } }
+
+.result-card { margin-top: .75rem; background: var(--bg3); border-radius: var(--radius-sm); border: 0.5px solid var(--border); padding: 1rem; }
+.result-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; }
+.result-label { font-size: 11px; color: var(--text2); }
+.result-value { font-size: 13px; font-weight: 600; }
+.conf-badge { font-size: 11px; padding: 2px 8px; border-radius: 99px; font-weight: 600; }
+.conf-alta { background: rgba(34,197,94,.15); color: var(--success); }
+.conf-media { background: rgba(245,158,11,.15); color: var(--warning); }
+.conf-baixa { background: rgba(239,68,68,.15); color: var(--danger); }
+.result-detail { font-size: 12px; color: var(--text2); margin-top: 8px; line-height: 1.5; }
+.result-actions { display: flex; gap: 8px; margin-top: 1rem; }
+.auto-bar { height: 3px; background: var(--accent); border-radius: 2px; margin-top: 10px; animation: fillbar 2.2s linear forwards; }
+@keyframes fillbar { from { width:0 } to { width:100% } }
+
+/* BUTTONS */
+.btn { height: 38px; padding: 0 16px; font-size: 13px; font-weight: 600; border-radius: var(--radius-sm); border: 0.5px solid var(--border2); background: var(--bg3); color: var(--text); cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; transition: opacity .15s; }
+.btn:active { opacity: .7; }
+.btn.primary { background: var(--accent); color: #0a0a0a; border-color: transparent; }
+.btn.sm { height: 32px; font-size: 12px; }
+.btn.full { width: 100%; justify-content: center; }
+.btn.danger-btn { color: var(--danger); border-color: var(--danger); }
+
+/* STATS */
+.stats-bar { display: flex; gap: 0; background: var(--bg2); border-bottom: 0.5px solid var(--border); flex-shrink: 0; }
+.stat-item { flex: 1; padding: .6rem .5rem; text-align: center; border-right: 0.5px solid var(--border); }
+.stat-item:last-child { border-right: none; }
+.stat-num { font-size: 18px; font-weight: 700; color: var(--accent); display: block; }
+.stat-label { font-size: 10px; color: var(--text2); margin-top: 1px; display: block; }
+
+/* CONTROLS */
+.controls { padding: .75rem 1rem; display: flex; gap: 8px; flex-wrap: wrap; background: var(--bg); border-bottom: 0.5px solid var(--border); position: sticky; top: 0; z-index: 10; flex-shrink: 0; }
+.controls input, .controls select { background: var(--bg3); border: 0.5px solid var(--border); color: var(--text); font-size: 13px; padding: 0 10px; height: 34px; border-radius: var(--radius-sm); outline: none; }
+.controls input { flex: 1; min-width: 120px; }
+.controls select { min-width: 110px; }
+
+/* COLLECTION GRID */
+.col-section { flex: 1; overflow-y: auto; }
+.col-controls-wrap { background: var(--bg); position: sticky; top: 0; z-index: 10; }
+.grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 1rem; }
+.card { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.card-vis { height: 120px; display: flex; align-items: center; justify-content: center; position: relative; }
+.card-vis-emoji { font-size: 52px; }
+.card-badge { position: absolute; top: 6px; right: 6px; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 99px; background: rgba(0,0,0,.6); color: #fff; letter-spacing: .03em; }
+.card-type-tag { position: absolute; top: 6px; left: 6px; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 99px; letter-spacing: .03em; }
+.type-jogo { background: rgba(29,78,216,.7); color: #bfdbfe; }
+.type-treino { background: rgba(21,128,61,.7); color: #bbf7d0; }
+.type-viagem { background: rgba(146,64,14,.7); color: #fde68a; }
+.type-goleiro { background: rgba(107,33,168,.7); color: #e9d5ff; }
+.type-especial { background: rgba(159,18,57,.7); color: #fecdd3; }
+.card-num { position: absolute; bottom: 6px; left: 8px; font-size: 11px; font-weight: 700; color: rgba(255,255,255,.8); }
+.card-body { padding: 10px 12px 12px; border-top: 0.5px solid var(--border); }
+.card-team { font-size: 13px; font-weight: 700; display: flex; justify-content: space-between; align-items: flex-start; }
+.card-del { background: none; border: none; color: var(--text3); font-size: 18px; cursor: pointer; line-height: 1; padding: 0; margin: -2px -2px 0 0; }
+.card-del:active { color: var(--danger); }
+.card-meta { font-size: 11px; color: var(--text2); margin-top: 3px; }
+.card-origin-tag { margin-top: 6px; font-size: 10px; padding: 2px 6px; border-radius: 99px; display: inline-block; background: var(--bg4); color: var(--text3); border: 0.5px solid var(--border); }
+.empty-state { text-align: center; padding: 4rem 2rem; color: var(--text2); }
+.empty-state .empty-icon { font-size: 52px; display: block; margin-bottom: 1rem; }
+.empty-state p { font-size: 14px; line-height: 1.6; }
+
+/* CATALOG */
+.cat-section { padding: 0 1rem 1rem; }
+.league-header { font-size: 10px; font-weight: 700; color: var(--text3); letter-spacing: .08em; text-transform: uppercase; padding: 1rem 0 .5rem; border-bottom: 0.5px solid var(--border); margin-bottom: .5rem; display: flex; justify-content: space-between; }
+.cat-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 6px; margin-bottom: .25rem; }
+.cat-item { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px; display: flex; align-items: center; gap: 8px; }
+.cat-item.owned { border-color: rgba(34,197,94,.4); background: rgba(34,197,94,.06); }
+.cat-emoji { font-size: 22px; flex-shrink: 0; }
+.cat-info { flex: 1; min-width: 0; }
+.cat-name { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cat-sub { font-size: 10px; color: var(--text2); margin-top: 1px; }
+.cat-check { color: var(--success); font-size: 14px; flex-shrink: 0; }
+
+/* MODAL */
+.overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 100; align-items: flex-end; justify-content: center; }
+.overlay.open { display: flex; }
+.modal { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius) var(--radius) 0 0; padding: 1.25rem; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; }
+.modal-handle { width: 36px; height: 4px; background: var(--border2); border-radius: 2px; margin: 0 auto 1rem; }
+.modal h2 { font-size: 16px; font-weight: 700; margin-bottom: 1rem; }
+.field { margin-bottom: 10px; }
+.field label { display: block; font-size: 11px; color: var(--text2); margin-bottom: 4px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; }
+.field input, .field select, .field textarea { width: 100%; background: var(--bg3); border: 0.5px solid var(--border); color: var(--text); font-size: 14px; padding: 9px 12px; border-radius: var(--radius-sm); outline: none; font-family: inherit; }
+.field textarea { resize: vertical; min-height: 60px; }
+.modal-footer { display: flex; gap: 8px; margin-top: 1.25rem; }
+.modal-footer .btn { flex: 1; justify-content: center; }
+
+/* TOAST */
+.toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--accent); color: #0a0a0a; padding: .6rem 1.25rem; border-radius: 99px; font-size: 13px; font-weight: 700; z-index: 200; opacity: 0; transition: opacity .3s; pointer-events: none; white-space: nowrap; box-shadow: 0 4px 20px rgba(0,0,0,.4); }
+.toast.show { opacity: 1; }
+
+/* INSTALL BANNER */
+.install-banner { display: none; margin: 1rem; background: var(--bg3); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 1rem; }
+.install-banner.show { display: block; }
+.install-banner h3 { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+.install-banner p { font-size: 12px; color: var(--text2); margin-bottom: .75rem; line-height: 1.5; }
+.install-banner .dismiss { background: none; border: none; color: var(--text3); font-size: 11px; cursor: pointer; margin-top: 6px; padding: 0; }
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-left">
+      <h1>👕 Minha Coleção</h1>
+      <p id="headerSub">Camisas de futebol • IA</p>
+    </div>
+    <button class="header-btn" onclick="openAddManual()" title="Adicionar manualmente">＋</button>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('scan')">
+      <span class="tab-icon">📷</span>Escanear
+    </div>
+    <div class="tab" onclick="switchTab('collection')">
+      <span class="tab-icon">🗂</span>Coleção
+    </div>
+    <div class="tab" onclick="switchTab('catalog')">
+      <span class="tab-icon">📋</span>Catálogo
+    </div>
+  </div>
+
+  <!-- ── SCAN ── -->
+  <div class="section active" id="tab-scan">
+    <div class="scan-wrap">
+
+      <div id="installBanner" class="install-banner">
+        <h3>📲 Instalar no celular</h3>
+        <p>Para instalar como app: no Safari toque em <strong>Compartilhar → Adicionar à Tela de Início</strong>. No Chrome toque no menu → <strong>Instalar app</strong>.</p>
+        <button class="btn sm full primary" id="installBtn" style="display:none" onclick="installPWA()">Instalar agora</button>
+        <button class="dismiss" onclick="dismissInstall()">× Fechar</button>
+      </div>
+
+      <div class="scan-zone" id="scanZone">
+        <input type="file" accept="image/*" capture="environment" onchange="handlePhoto(event)" id="photoInput">
+        <span class="scan-big-icon">📷</span>
+        <h2>Fotografar camisa</h2>
+        <p>Tire uma foto com a câmera<br>ou escolha da galeria</p>
+      </div>
+
+      <div class="scan-tip">
+        <strong>Como funciona:</strong> A IA analisa a foto e identifica automaticamente o time, tipo de camisa e temporada. Se a confiança for alta, adiciona sozinha em 2 segundos.
+      </div>
+
+      <div class="preview-box" id="previewBox" style="display:none">
+        <img id="previewImg" class="preview-img" src="" alt="">
+        <div class="preview-body">
+          <div class="ai-status">
+            <div class="ai-dot pulse" id="aiDot"></div>
+            <span id="aiStatusText">Analisando com IA...</span>
+          </div>
+          <div id="resultArea"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── COLLECTION ── -->
+  <div class="section col-section" id="tab-collection">
+    <div class="stats-bar" id="statsBar">
+      <div class="stat-item"><span class="stat-num">0</span><span class="stat-label">Camisas</span></div>
+      <div class="stat-item"><span class="stat-num">0</span><span class="stat-label">Times</span></div>
+      <div class="stat-item"><span class="stat-num">0</span><span class="stat-label">Países</span></div>
+    </div>
+    <div class="col-controls-wrap">
+      <div class="controls">
+        <input type="text" id="search" placeholder="🔍 Buscar..." oninput="renderCollection()">
+        <select id="filterType" onchange="renderCollection()">
+          <option value="">Todos os tipos</option>
+          <option>Jogo</option><option>Treino</option>
+          <option>Viagem</option><option>Goleiro</option><option>Especial</option>
+        </select>
+      </div>
+    </div>
+    <div class="grid" id="collectionGrid"></div>
+  </div>
+
+  <!-- ── CATALOG ── -->
+  <div class="section" id="tab-catalog">
+    <div class="col-controls-wrap">
+      <div class="controls">
+        <input type="text" id="catSearch" placeholder="🔍 Buscar clube..." oninput="renderCatalog()">
+        <select id="catLeague" onchange="renderCatalog()">
+          <option value="">Todas as ligas</option>
+          <option>Série A</option><option>Série B</option><option>Série C</option>
+        </select>
+      </div>
+    </div>
+    <div class="cat-section" id="catalogContainer"></div>
+  </div>
+
+</div>
+
+<!-- MODAL -->
+<div class="overlay" id="overlay" onclick="closeIfOut(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2 id="modalTitle">Adicionar camisa</h2>
+    <div class="field"><label>Time *</label><input id="fTeam" placeholder="Ex: Flamengo" list="clubList"><datalist id="clubList"></datalist></div>
+    <div class="field"><label>Liga</label><input id="fLeague" placeholder="Ex: Série A"></div>
+    <div class="field"><label>País</label><input id="fCountry" placeholder="Ex: Brasil" value="Brasil"></div>
+    <div class="field"><label>Tipo de camisa</label>
+      <select id="fType"><option>Jogo</option><option>Treino</option><option>Viagem</option><option>Goleiro</option><option>Especial</option></select>
+    </div>
+    <div class="field"><label>Temporada / Ano</label><input id="fYear" placeholder="Ex: 2024-25"></div>
+    <div class="field"><label>Número e jogador</label><input id="fPlayer" placeholder="Ex: 10 – Gabigol"></div>
+    <div class="field"><label>Como adquiriu</label>
+      <select id="fOrigin"><option>Compra</option><option>Viagem</option><option>Presente</option><option>Troca</option><option>Foto</option><option>Outro</option></select>
+    </div>
+    <div class="field"><label>Cor principal</label>
+      <select id="fColor">
+        <option value="#1a1a1a">Preto</option>
+        <option value="#cc0000">Vermelho</option>
+        <option value="#0057b8">Azul royal</option>
+        <option value="#003087">Azul marinho</option>
+        <option value="#006400">Verde escuro</option>
+        <option value="#ffffff">Branco</option>
+        <option value="#ffcc00">Amarelo</option>
+        <option value="#ff6600">Laranja</option>
+        <option value="#800080">Roxo</option>
+        <option value="#874346">Vinho</option>
+      </select>
+    </div>
+    <div class="field"><label>Observações</label><textarea id="fNote" placeholder="Detalhes especiais..."></textarea></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn primary" onclick="saveShirt()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── ANTHROPIC API KEY ─────────────────────────────────────────────────────────
+// IMPORTANTE: Substitua pela sua chave da API Anthropic
+// Obtenha em: https://console.anthropic.com/
+const ANTHROPIC_API_KEY = 'SUA_CHAVE_API_AQUI';
+
+// ── CLUBS DATABASE ────────────────────────────────────────────────────────────
+const CLUBS = [
+  // Série A
+  {id:'atletico-mg',name:'Atlético-MG',league:'Série A',emoji:'⚫',color:'#1a1a1a',types:['Jogo','Treino','Goleiro','Viagem']},
+  {id:'flamengo',name:'Flamengo',league:'Série A',emoji:'🔴',color:'#cc0000',types:['Jogo','Treino','Goleiro','Viagem','Especial']},
+  {id:'fluminense',name:'Fluminense',league:'Série A',emoji:'🔴',color:'#7b0000',types:['Jogo','Treino','Goleiro','Viagem']},
+  {id:'vasco',name:'Vasco da Gama',league:'Série A',emoji:'⚫',color:'#1a1a1a',types:['Jogo','Treino','Goleiro','Viagem']},
+  {id:'botafogo',name:'Botafogo',league:'Série A',emoji:'⚫',color:'#1a1a1a',types:['Jogo','Treino','Goleiro','Viagem']},
+  {id:'palmeiras',name:'Palmeiras',league:'Série A',emoji:'🟢',color:'#006400',types:['Jogo','Treino','Goleiro','Viagem','Especial']},
+  {id:'corinthians',name:'Corinthians',league:'Série A',emoji:'⚫',color:'#1a1a1a',types:['Jogo','Treino','Goleiro','Viagem']},
+  {id:'sao-paulo',name:'São Paulo',league:'Série A',emoji:'🔴',color:'#cc0000',types:['Jogo','Treino','Goleiro','Viagem']},
+  {id:'santos',name:'Santos',league:'Série A',emoji:'⚪',color:'#2a2a2a',types:['Jogo','Treino','Goleiro','Viagem']},
+  {id:'internacional',name:'Internacional',league:'Série A',emoji:'🔴',color:'#cc0000',types:['Jogo','Treino','Goleiro','Viagem']},
+  {id:'gremio',name:'Grêmio',league:'Série A',emoji:'🔵',color:'#0057b8',types:['Jogo','Treino','Goleiro','Viagem']},
+  {id:'cruzeiro',name:'Cruzeiro',league:'Série A',emoji:'🔵',color:'#003087',types:['Jogo','Treino','Goleiro','Viagem']},
+  {id:'atletico-pr',name:'Athletico-PR',league:'Série A',emoji:'🔴',color:'#cc0000',types:['Jogo','Treino','Goleiro','Viagem']},
+  {id:'atletico-go',name:'Atlético-GO',league:'Série A',emoji:'🔴',color:'#cc0000',types:['Jogo','Treino','Goleiro']},
+  {id:'bragantino',name:'Red Bull Bragantino',league:'Série A',emoji:'🔴',color:'#cc0000',types:['Jogo','Treino','Goleiro','Viagem']},
+  {id:'fortaleza',name:'Fortaleza',league:'Série A',emoji:'🔵',color:'#003087',types:['Jogo','Treino','Goleiro','Viagem']},
+  {id:'bahia',name:'Bahia',league:'Série A',emoji:'🔵',color:'#003087',types:['Jogo','Treino','Goleiro','Viagem']},
+  {id:'juventude',name:'Juventude',league:'Série A',emoji:'🟢',color:'#006400',types:['Jogo','Treino','Goleiro']},
+  {id:'criciuma',name:'Criciúma',league:'Série A',emoji:'🟡',color:'#cc8800',types:['Jogo','Treino','Goleiro']},
+  {id:'vitoria',name:'Vitória',league:'Série A',emoji:'🔴',color:'#cc0000',types:['Jogo','Treino','Goleiro']},
+  // Série B
+  {id:'sport',name:'Sport',league:'Série B',emoji:'🔴',color:'#cc0000',types:['Jogo','Treino','Goleiro']},
+  {id:'coritiba',name:'Coritiba',league:'Série B',emoji:'🟢',color:'#006400',types:['Jogo','Treino','Goleiro']},
+  {id:'chapecoense',name:'Chapecoense',league:'Série B',emoji:'🟢',color:'#006400',types:['Jogo','Treino','Goleiro']},
+  {id:'america-mg',name:'América-MG',league:'Série B',emoji:'🐰',color:'#006400',types:['Jogo','Treino','Goleiro']},
+  {id:'ponte-preta',name:'Ponte Preta',league:'Série B',emoji:'⚫',color:'#1a1a1a',types:['Jogo','Treino','Goleiro']},
+  {id:'ceara',name:'Ceará',league:'Série B',emoji:'⚫',color:'#1a1a1a',types:['Jogo','Treino','Goleiro']},
+  {id:'avai',name:'Avaí',league:'Série B',emoji:'🔵',color:'#003087',types:['Jogo','Treino','Goleiro']},
+  {id:'guarani',name:'Guarani',league:'Série B',emoji:'🟢',color:'#006400',types:['Jogo','Treino','Goleiro']},
+  {id:'operario',name:'Operário-PR',league:'Série B',emoji:'⚫',color:'#1a1a1a',types:['Jogo','Treino','Goleiro']},
+  {id:'novorizontino',name:'Novorizontino',league:'Série B',emoji:'🟡',color:'#cc8800',types:['Jogo','Treino','Goleiro']},
+  {id:'mirassol',name:'Mirassol',league:'Série B',emoji:'🟡',color:'#cc8800',types:['Jogo','Treino','Goleiro']},
+  {id:'ituano',name:'Ituano',league:'Série B',emoji:'🔴',color:'#cc0000',types:['Jogo','Treino','Goleiro']},
+  {id:'botafogo-sp',name:'Botafogo-SP',league:'Série B',emoji:'⚫',color:'#1a1a1a',types:['Jogo','Treino','Goleiro']},
+  {id:'brusque',name:'Brusque',league:'Série B',emoji:'🔵',color:'#003087',types:['Jogo','Treino','Goleiro']},
+  {id:'goias',name:'Goiás',league:'Série B',emoji:'🟢',color:'#006400',types:['Jogo','Treino','Goleiro']},
+  {id:'paysandu',name:'Paysandu',league:'Série B',emoji:'🔵',color:'#003087',types:['Jogo','Treino','Goleiro']},
+  {id:'remo',name:'Clube do Remo',league:'Série B',emoji:'🔵',color:'#003087',types:['Jogo','Treino','Goleiro']},
+  {id:'amazonas',name:'Amazonas FC',league:'Série B',emoji:'🟡',color:'#cc8800',types:['Jogo','Treino','Goleiro']},
+  {id:'csa',name:'CSA',league:'Série B',emoji:'🔵',color:'#003087',types:['Jogo','Treino','Goleiro']},
+  {id:'abc',name:'ABC',league:'Série B',emoji:'🔴',color:'#cc0000',types:['Jogo','Treino','Goleiro']},
+  // Série C
+  {id:'sampaio-correa',name:'Sampaio Corrêa',league:'Série C',emoji:'🔵',color:'#003087',types:['Jogo','Treino']},
+  {id:'ferroviario',name:'Ferroviário',league:'Série C',emoji:'🔴',color:'#cc0000',types:['Jogo','Treino']},
+  {id:'floresta',name:'Floresta',league:'Série C',emoji:'🟢',color:'#006400',types:['Jogo','Treino']},
+  {id:'campinense',name:'Campinense',league:'Série C',emoji:'🔴',color:'#cc0000',types:['Jogo','Treino']},
+  {id:'confianca',name:'Confiança',league:'Série C',emoji:'🔵',color:'#003087',types:['Jogo','Treino']},
+  {id:'tombense',name:'Tombense',league:'Série C',emoji:'🔴',color:'#cc0000',types:['Jogo','Treino']},
+  {id:'volta-redonda',name:'Volta Redonda',league:'Série C',emoji:'🔴',color:'#cc0000',types:['Jogo','Treino']},
+  {id:'figueirense',name:'Figueirense',league:'Série C',emoji:'⚫',color:'#1a1a1a',types:['Jogo','Treino']},
+  {id:'nautico',name:'Náutico',league:'Série C',emoji:'🔴',color:'#cc0000',types:['Jogo','Treino']},
+  {id:'cfc',name:'Cascavel FC',league:'Série C',emoji:'🔵',color:'#003087',types:['Jogo','Treino']},
+];
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let collection = JSON.parse(localStorage.getItem('camisas_v3') || '[]');
+let editId = null;
+let pendingData = null;
+let deferredPrompt = null;
+
+function save() { localStorage.setItem('camisas_v3', JSON.stringify(collection)); }
+
+// ── PWA INSTALL ───────────────────────────────────────────────────────────────
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('installBtn').style.display = 'block';
+  showInstallBanner();
+});
+
+function showInstallBanner() {
+  if (!localStorage.getItem('installDismissed')) {
+    document.getElementById('installBanner').classList.add('show');
+  }
+}
+
+function dismissInstall() {
+  document.getElementById('installBanner').classList.remove('show');
+  localStorage.setItem('installDismissed', '1');
+}
+
+async function installPWA() {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  if (outcome === 'accepted') showToast('✓ App instalado!');
+  deferredPrompt = null;
+}
+
+// iOS install hint
+if (/iphone|ipad|ipod/i.test(navigator.userAgent) && !navigator.standalone) {
+  showInstallBanner();
+}
+
+// ── TABS ──────────────────────────────────────────────────────────────────────
+function switchTab(id) {
+  document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', ['scan','collection','catalog'][i] === id));
+  document.querySelectorAll('.section').forEach(s => s.classList.toggle('active', s.id === 'tab-' + id));
+  if (id === 'collection') renderCollection();
+  if (id === 'catalog') renderCatalog();
+}
+
+// ── PHOTO & AI ────────────────────────────────────────────────────────────────
+async function handlePhoto(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async ev => {
+    const b64 = ev.target.result.split(',')[1];
+    const mime = file.type || 'image/jpeg';
+    document.getElementById('previewImg').src = ev.target.result;
+    document.getElementById('previewBox').style.display = 'block';
+    document.getElementById('aiDot').className = 'ai-dot pulse';
+    document.getElementById('aiStatusText').textContent = 'Analisando com IA...';
+    document.getElementById('resultArea').innerHTML = '';
+    await analyzeWithAI(b64, mime);
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+
+async function analyzeWithAI(b64, mime) {
+  const clubList = CLUBS.map(c => c.name).join(', ');
+  const prompt = `Você é um especialista em camisas de futebol brasileiro. Analise esta imagem e identifique a camisa de futebol.
+
+Lista de clubes no catálogo: ${clubList}
+
+Se não for uma camisa de futebol ou não conseguir identificar, retorne found: false.
+
+Responda SOMENTE com JSON puro e válido, sem markdown, sem explicações adicionais:
+{
+  "found": true,
+  "team": "nome exato conforme catálogo ou nome identificado",
+  "league": "Série A, Série B, Série C ou outra liga",
+  "country": "Brasil",
+  "type": "Jogo, Treino, Viagem, Goleiro ou Especial",
+  "year": "temporada como 2024-25 ou string vazia",
+  "color": "cor principal em hex como #cc0000",
+  "confidence": "alta, média ou baixa",
+  "details": "breve descrição em português do que foi identificado na imagem"
+}`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: mime, data: b64 } },
+            { type: 'text', text: prompt }
+          ]
+        }]
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error?.message || 'Erro na API');
+    }
+
+    const data = await res.json();
+    const raw = data.content?.find(b => b.type === 'text')?.text || '{}';
+    const clean = raw.replace(/```json|```/g, '').trim();
+    const result = JSON.parse(clean);
+    showResult(result);
+  } catch (err) {
+    document.getElementById('aiDot').className = 'ai-dot error';
+    if (err.message.includes('API')) {
+      document.getElementById('aiStatusText').textContent = 'Configure sua chave API no arquivo index.html';
+    } else {
+      document.getElementById('aiStatusText').textContent = 'Erro ao analisar. Tente outra foto.';
+    }
+    document.getElementById('resultArea').innerHTML = `
+      <div class="result-card" style="margin-top:.75rem">
+        <p style="font-size:12px;color:var(--text2);line-height:1.5">${err.message}</p>
+        <div class="result-actions" style="margin-top:.75rem">
+          <button class="btn sm primary full" onclick="openAddManual()">+ Adicionar manualmente</button>
+        </div>
+      </div>`;
+  }
+}
+
+function showResult(r) {
+  const dot = document.getElementById('aiDot');
+  const status = document.getElementById('aiStatusText');
+  const area = document.getElementById('resultArea');
+
+  if (!r.found) {
+    dot.className = 'ai-dot error';
+    status.textContent = 'Camisa não identificada';
+    area.innerHTML = `<div class="result-card" style="margin-top:.75rem">
+      <p class="result-detail">${r.details || 'Não foi possível identificar. Tente uma foto mais nítida com boa iluminação, mostrando o escudo claramente.'}</p>
+      <div class="result-actions" style="margin-top:.75rem">
+        <button class="btn sm primary full" onclick="openAddManual()">+ Adicionar manualmente</button>
+      </div>
+    </div>`;
+    return;
+  }
+
+  dot.className = 'ai-dot done';
+  status.textContent = 'Camisa identificada!';
+  pendingData = r;
+
+  const confClass = { alta: 'conf-alta', média: 'conf-media', baixa: 'conf-baixa' }[r.confidence] || 'conf-media';
+
+  area.innerHTML = `<div class="result-card">
+    <div class="result-row">
+      <span class="result-label">Time</span>
+      <span class="result-value">${r.team}</span>
+    </div>
+    <div class="result-row">
+      <span class="result-label">Tipo</span>
+      <span class="result-value">${r.type}</span>
+    </div>
+    ${r.year ? `<div class="result-row"><span class="result-label">Temporada</span><span class="result-value">${r.year}</span></div>` : ''}
+    <div class="result-row">
+      <span class="result-label">Confiança da IA</span>
+      <span class="conf-badge ${confClass}">${r.confidence}</span>
+    </div>
+    <p class="result-detail">${r.details}</p>
+    ${r.confidence === 'alta' ? '<div class="auto-bar" id="autoBar"></div><p style="font-size:11px;color:var(--text3);margin-top:4px">Adicionando automaticamente...</p>' : ''}
+    <div class="result-actions" style="margin-top:.75rem">
+      <button class="btn sm primary" onclick="confirmAdd(false)" style="flex:1;justify-content:center">✓ Confirmar</button>
+      <button class="btn sm" onclick="openAddManual(pendingData)" style="flex:1;justify-content:center">Editar</button>
+    </div>
+  </div>`;
+
+  if (r.confidence === 'alta') {
+    setTimeout(() => { if (pendingData) confirmAdd(true); }, 2300);
+  }
+}
+
+function confirmAdd(auto = false) {
+  if (!pendingData) return;
+  const club = CLUBS.find(c => c.name.toLowerCase() === (pendingData.team || '').toLowerCase());
+  const shirt = {
+    id: Date.now().toString(),
+    team: pendingData.team,
+    league: pendingData.league || club?.league || '',
+    country: pendingData.country || 'Brasil',
+    type: pendingData.type || 'Jogo',
+    year: pendingData.year || '',
+    player: '',
+    origin: 'Foto',
+    color: pendingData.color || club?.color || '#1a1a1a',
+    emoji: club?.emoji || '👕',
+    note: pendingData.details || '',
+  };
+  collection.unshift(shirt);
+  save();
+  showToast(auto ? `✓ "${shirt.team}" adicionada!` : `✓ "${shirt.team}" salva!`);
+  pendingData = null;
+  document.getElementById('previewBox').style.display = 'none';
+  document.getElementById('resultArea').innerHTML = '';
+  switchTab('collection');
+}
+
+// ── MANUAL ADD/EDIT ───────────────────────────────────────────────────────────
+// Preencher datalist com clubes
+document.getElementById('clubList').innerHTML = CLUBS.map(c => `<option value="${c.name}">`).join('');
+
+function openAddManual(prefill = null) {
+  editId = null;
+  const p = prefill && typeof prefill === 'object' && !prefill.target ? prefill : null;
+  document.getElementById('modalTitle').textContent = 'Adicionar camisa';
+  document.getElementById('fTeam').value = p?.team || '';
+  document.getElementById('fLeague').value = p?.league || '';
+  document.getElementById('fCountry').value = p?.country || 'Brasil';
+  document.getElementById('fType').value = p?.type || 'Jogo';
+  document.getElementById('fYear').value = p?.year || '';
+  document.getElementById('fPlayer').value = '';
+  document.getElementById('fOrigin').value = 'Compra';
+  document.getElementById('fColor').value = p?.color || '#1a1a1a';
+  document.getElementById('fNote').value = p?.details || '';
+  document.getElementById('overlay').classList.add('open');
+}
+
+function openEdit(id) {
+  const s = collection.find(x => x.id === id); if (!s) return;
+  editId = id;
+  document.getElementById('modalTitle').textContent = 'Editar camisa';
+  document.getElementById('fTeam').value = s.team || '';
+  document.getElementById('fLeague').value = s.league || '';
+  document.getElementById('fCountry').value = s.country || 'Brasil';
+  document.getElementById('fType').value = s.type || 'Jogo';
+  document.getElementById('fYear').value = s.year || '';
+  document.getElementById('fPlayer').value = s.player || '';
+  document.getElementById('fOrigin').value = s.origin || 'Compra';
+  document.getElementById('fColor').value = s.color || '#1a1a1a';
+  document.getElementById('fNote').value = s.note || '';
+  document.getElementById('overlay').classList.add('open');
+}
+
+function closeModal() { document.getElementById('overlay').classList.remove('open'); }
+function closeIfOut(e) { if (e.target === document.getElementById('overlay')) closeModal(); }
+
+function saveShirt() {
+  const team = document.getElementById('fTeam').value.trim();
+  if (!team) { showToast('⚠ Informe o nome do time'); return; }
+  const club = CLUBS.find(c => c.name.toLowerCase() === team.toLowerCase());
+  const data = {
+    id: editId || Date.now().toString(),
+    team, emoji: club?.emoji || '👕',
+    league: document.getElementById('fLeague').value.trim() || club?.league || '',
+    country: document.getElementById('fCountry').value.trim() || 'Brasil',
+    type: document.getElementById('fType').value,
+    year: document.getElementById('fYear').value.trim(),
+    player: document.getElementById('fPlayer').value.trim(),
+    origin: document.getElementById('fOrigin').value,
+    color: document.getElementById('fColor').value,
+    note: document.getElementById('fNote').value.trim(),
+  };
+  if (editId) { const i = collection.findIndex(x => x.id === editId); collection[i] = data; }
+  else collection.unshift(data);
+  save(); closeModal(); renderCollection();
+  showToast(`✓ "${data.team}" salva!`);
+}
+
+// ── RENDER COLLECTION ─────────────────────────────────────────────────────────
+function renderCollection() {
+  const q = document.getElementById('search').value.toLowerCase();
+  const ft = document.getElementById('filterType').value;
+
+  const filtered = collection.filter(s => {
+    if (q && !`${s.team} ${s.player} ${s.league}`.toLowerCase().includes(q)) return false;
+    if (ft && s.type !== ft) return false;
+    return true;
+  });
+
+  // stats
+  const teams = new Set(collection.map(s => s.team));
+  const countries = new Set(collection.map(s => s.country || 'Brasil'));
+  document.getElementById('statsBar').innerHTML = `
+    <div class="stat-item"><span class="stat-num">${collection.length}</span><span class="stat-label">Camisas</span></div>
+    <div class="stat-item"><span class="stat-num">${teams.size}</span><span class="stat-label">Times</span></div>
+    <div class="stat-item"><span class="stat-num">${countries.size}</span><span class="stat-label">Países</span></div>
+  `;
+
+  const grid = document.getElementById('collectionGrid');
+  if (!filtered.length) {
+    grid.innerHTML = collection.length
+      ? '<div class="empty-state" style="grid-column:1/-1"><span class="empty-icon">🔍</span><p>Nenhuma camisa encontrada com esses filtros.</p></div>'
+      : '<div class="empty-state" style="grid-column:1/-1"><span class="empty-icon">📷</span><p>Sua coleção está vazia.<br>Fotografe sua primeira camisa!</p></div>';
+    return;
+  }
+
+  grid.innerHTML = filtered.map(s => {
+    const typeClass = 'type-' + (s.type || 'jogo').toLowerCase();
+    return `<div class="card">
+      <div class="card-vis" style="background:${s.color || '#1a1a1a'}">
+        <span class="card-vis-emoji">${s.emoji || '👕'}</span>
+        <span class="card-badge">${s.country || 'BR'}</span>
+        ${s.type ? `<span class="card-type-tag ${typeClass}">${s.type}</span>` : ''}
+        ${s.player ? `<span class="card-num">${s.player.split(/[–-]/)[0].trim()}</span>` : ''}
+      </div>
+      <div class="card-body">
+        <div class="card-team">
+          <span>${s.team}</span>
+          <button class="card-del" onclick="deleteShirt('${s.id}')">×</button>
+        </div>
+        <div class="card-meta">${[s.league, s.year].filter(Boolean).join(' · ') || '&nbsp;'}</div>
+        ${s.player ? `<div class="card-meta">${s.player}</div>` : ''}
+        <span class="card-origin-tag" onclick="openEdit('${s.id}')" style="cursor:pointer">${s.origin || 'Compra'} ✏</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function deleteShirt(id) {
+  if (!confirm('Remover esta camisa da coleção?')) return;
+  collection = collection.filter(x => x.id !== id);
+  save(); renderCollection();
+  showToast('Camisa removida');
+}
+
+// ── RENDER CATALOG ────────────────────────────────────────────────────────────
+function renderCatalog() {
+  const q = document.getElementById('catSearch').value.toLowerCase();
+  const fl = document.getElementById('catLeague').value;
+
+  const ownedTeams = new Set(collection.map(s => s.team.toLowerCase()));
+
+  const filtered = CLUBS.filter(c => {
+    if (q && !c.name.toLowerCase().includes(q)) return false;
+    if (fl && c.league !== fl) return false;
+    return true;
+  });
+
+  const byLeague = {};
+  filtered.forEach(c => { if (!byLeague[c.league]) byLeague[c.league] = []; byLeague[c.league].push(c); });
+
+  const ownedCount = CLUBS.filter(c => ownedTeams.has(c.name.toLowerCase())).length;
+
+  document.getElementById('catalogContainer').innerHTML =
+    `<div style="font-size:12px;color:var(--text2);padding:.75rem 0 .25rem">Você tem camisas de <strong style="color:var(--accent)">${ownedCount}</strong> dos ${CLUBS.length} clubes cadastrados.</div>` +
+    Object.entries(byLeague).map(([league, clubs]) => {
+      const ownedInLeague = clubs.filter(c => ownedTeams.has(c.name.toLowerCase())).length;
+      return `<div class="league-header">${league} <span>${ownedInLeague}/${clubs.length} ✓</span></div>
+      <div class="cat-grid">
+        ${clubs.map(c => {
+          const owned = ownedTeams.has(c.name.toLowerCase());
+          return `<div class="cat-item${owned ? ' owned' : ''}">
+            <span class="cat-emoji">${c.emoji}</span>
+            <div class="cat-info">
+              <div class="cat-name">${c.name}</div>
+              <div class="cat-sub">${c.types.join(' · ')}</div>
+            </div>
+            ${owned ? '<span class="cat-check">✓</span>' : ''}
+          </div>`;
+        }).join('')}
+      </div>`;
+    }).join('');
+}
+
+// ── TOAST ─────────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+renderCollection();
+
+// Service Worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
